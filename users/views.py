@@ -1,11 +1,10 @@
 from django.http import JsonResponse, HttpRequest, HttpResponse
 import json
 from .forms import CustomUserCreationForm
-from django.db.models import QuerySet
-from .models import CustomUser
 from django.contrib.auth import login, logout, authenticate
-from django.forms.models import model_to_dict
 from http import HTTPStatus
+from utils.decorators import require_PUT, require_POST
+from .models import CustomUser
 
 
 # Create your views here.
@@ -17,34 +16,54 @@ def create_message(msg: str):
     return json.dumps({"message": msg})
 
 
+@require_POST
 def user_register(request: HttpRequest) -> HttpResponse:
-    if request.method != "POST":
-        return HttpResponse(create_message("Invalid Method"), status=HTTPStatus.METHOD_NOT_ALLOWED)
-    user_info: dict = request.POST.dict()
+    user_info = request.POST.dict()
     form = CustomUserCreationForm(user_info)
+
     if form.is_valid():
-        form.save()
-        users_query: QuerySet = CustomUser.objects.get(username=user_info.get("username"))
-        user = model_to_dict(users_query)
+        user = form.save()
+        return JsonResponse({'message': "User Created", 'user_id': user.id}, status=HTTPStatus.OK)
 
-        return HttpResponse(create_message("User Created"), status=HTTPStatus.OK)
-    return HttpResponse(json.dumps(form.errors.get_json_data()))
+    return JsonResponse({'errors': form.errors.get_json_data()}, status=HTTPStatus.BAD_REQUEST)
 
 
+@require_POST
 def user_sign_in(request: HttpRequest) -> HttpResponse:
-    if request.method != "POST":
-        return HttpResponse(create_message("Invalid Method"), status=HTTPStatus.METHOD_NOT_ALLOWED)
-    user_info: dict = request.POST.dict()
-    user = authenticate(
-        username=user_info["username"],
-        password=user_info["password"])
+    user_info = request.POST.dict()
+    username = user_info.get("username")
+    password = user_info.get("password")
+
+    if not username or not password:
+        return JsonResponse(
+            {'message': "Please provide both username and password."},
+            status=HTTPStatus.BAD_REQUEST
+        )
+
+    user = authenticate(username=username, password=password)
+
     if user is not None:
         login(request, user)
-        return HttpResponse(json.dumps({"user_id": user.id}), status=HTTPStatus.OK)
-    return HttpResponse(json.dumps({'message': "Please enter a correct username and password.\n\nNote that both "
-                                               "fields may be case-sensitive."}), status=HTTPStatus.BAD_REQUEST)
+        return JsonResponse({"user_id": user.id}, status=HTTPStatus.OK)
+
+    return JsonResponse(
+        {
+            'message': "Invalid credentials. Please enter a correct username and password. Note that both fields "
+                       "maybe be case-sensitive."},
+        status=HTTPStatus.UNAUTHORIZED
+    )
 
 
+@require_POST
 def user_sign_out(request: HttpRequest) -> HttpResponse:
     logout(request)
-    return HttpResponse(json.dumps({'message': 'User logged out'}), status=HTTPStatus.OK)
+    return JsonResponse({'message': 'User logged out'}, status=HTTPStatus.OK)
+
+
+@require_PUT
+def update_user(request: HttpRequest) -> HttpResponse:
+    # TODO: check if the user authorized
+    # TODO: update only the the first name, last name, email, or username. Based on what is include in the form data
+    user = request.user
+    user.save()
+    return JsonResponse({'message': 'Update User is active'}, status=HTTPStatus.OK)
