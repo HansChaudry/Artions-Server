@@ -2,82 +2,23 @@ from functools import wraps
 from django.http import JsonResponse
 from http import HTTPStatus
 
+def require_http_method(method):
+    def decorator(view_func):
+        @wraps(view_func)
+        def _wrapped_view(request, *args, **kwargs):
+            if request.method != method:
+                return JsonResponse({'message': 'Invalid Method'}, status=HTTPStatus.METHOD_NOT_ALLOWED)
+            return view_func(request, *args, **kwargs)
 
-def require_PUT(view_func):
-    @wraps(view_func)
-    def _wrapped_view(request, *args, **kwargs):
-        if request.method != "PUT":
-            return JsonResponse({'message': 'Invalid Method'}, status=HTTPStatus.METHOD_NOT_ALLOWED)
-        return view_func(request, *args, **kwargs)
+        return _wrapped_view
 
-    return _wrapped_view
+    return decorator
 
-
-def require_POST(view_func):
-    @wraps(view_func)
-    def _wrapped_view(request, *args, **kwargs):
-        if request.method != "POST":
-            return JsonResponse({'message': 'Invalid Method'}, status=HTTPStatus.METHOD_NOT_ALLOWED)
-        return view_func(request, *args, **kwargs)
-
-    return _wrapped_view
-
-
-def require_GET(view_func):
-    @wraps(view_func)
-    def _wrapped_view(request, *args, **kwargs):
-        if request.method != "GET":
-            return JsonResponse({'message': 'Invalid Method'}, status=HTTPStatus.METHOD_NOT_ALLOWED)
-        return view_func(request, *args, **kwargs)
-
-    return _wrapped_view
-
-
-def require_DELETE(view_func):
-    @wraps(view_func)
-    def _wrapped_view(request, *args, **kwargs):
-        if request.method != "DELETE":
-            return JsonResponse({'message': 'Invalid Method'}, status=HTTPStatus.METHOD_NOT_ALLOWED)
-        return view_func(request, *args, **kwargs)
-
-    return _wrapped_view
-
-
-def require_HEAD(view_func):
-    @wraps(view_func)
-    def _wrapped_view(request, *args, **kwargs):
-        if request.method != "HEAD":
-            return JsonResponse({'message': 'Invalid Method'}, status=HTTPStatus.METHOD_NOT_ALLOWED)
-        return view_func(request, *args, **kwargs)
-
-    return _wrapped_view
-
-
-def require_CONNECT(view_func):
-    @wraps(view_func)
-    def _wrapped_view(request, *args, **kwargs):
-        if request.method != "CONNECT":
-            return JsonResponse({'message': 'Invalid Method'}, status=HTTPStatus.METHOD_NOT_ALLOWED)
-        return view_func(request, *args, **kwargs)
-
-    return _wrapped_view
-
-
-def require_TRACE(view_func):
-    @wraps(view_func)
-    def _wrapped_view(request, *args, **kwargs):
-        if request.method != "TRACE":
-            return JsonResponse({'message': 'Invalid Method'}, status=HTTPStatus.METHOD_NOT_ALLOWED)
-        return view_func(request, *args, **kwargs)
-
-    return _wrapped_view
-
-
-def require_PATCH(view_func):
-    @wraps(view_func)
-    def _wrapped_view(request, *args, **kwargs):
-        if request.method != "PATCH":
-            return JsonResponse({'message': 'Invalid Method'}, status=HTTPStatus.METHOD_NOT_ALLOWED)
-        return view_func(request, *args, **kwargs)
-
-    return _wrapped_view
+require_PUT = require_http_method("PUT")
+require_POST = require_http_method("POST")
+require_GET = require_http_method("GET")
+require_DELETE = require_http_method("DELETE")
+require_HEAD = require_http_method("HEAD")
+require_CONNECT = require_http_method("CONNECT")
+require_TRACE = require_http_method("TRACE")
+require_PATCH = require_http_method("PATCH")
