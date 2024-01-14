@@ -6,7 +6,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
@@ -22,7 +21,9 @@ class Migration(migrations.Migration):
                 ('description', models.CharField(blank='True', max_length=120, verbose_name='description')),
                 ('image_url', models.CharField(blank='True', max_length=120, verbose_name='Image URL')),
                 ('date_created', models.DateTimeField(null=True)),
-                ('user_id', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+                (
+                    'user_id',
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
             ],
         ),
     ]

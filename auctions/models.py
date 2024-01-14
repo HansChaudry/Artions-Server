@@ -2,7 +2,9 @@ from django.db import models
 from users.models import CustomUser
 from artworks.models import Artwork
 
+
 # Create your models here.
+
 
 class Auction(models.Model):
     user_id = models.ForeignKey(CustomUser, on_delete=models.CASCADE, null=True)

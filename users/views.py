@@ -7,6 +7,7 @@ from utils.decorators import require_PUT, require_POST, require_GET
 from .models import CustomUser, Follow
 from django.forms.models import model_to_dict
 from django.http.multipartparser import MultiPartParser
+from utils.utils import format_user_objects, format_user_profile
 
 
 # Create your views here.
@@ -20,6 +21,9 @@ def create_message(msg: str):
 
 @require_POST
 def user_register(request: HttpRequest) -> HttpResponse:
+    """
+        Create a new user in the system
+    """
     user_info = request.POST.dict()
     form = CustomUserCreationForm(user_info)
 
@@ -32,6 +36,9 @@ def user_register(request: HttpRequest) -> HttpResponse:
 
 @require_POST
 def user_sign_in(request: HttpRequest) -> HttpResponse:
+    """
+        Sign in using a valid username and password
+    """
     user_info = request.POST.dict()
     username = user_info.get("username")
     password = user_info.get("password")
@@ -58,12 +65,18 @@ def user_sign_in(request: HttpRequest) -> HttpResponse:
 
 @require_POST
 def user_sign_out(request: HttpRequest) -> HttpResponse:
+    """
+        Sign out a user with a valid session id passed through the request object
+    """
     logout(request)
     return JsonResponse({'message': 'User logged out'}, status=HTTPStatus.OK)
 
 
 @require_PUT
 def update_user(request: HttpRequest) -> HttpResponse:
+    """
+        Update the first or last name, email, and username of a user in the database
+    """
     user = request.user
     if user.is_authenticated:
         new_user_info = MultiPartParser(request.META, request, request.upload_handlers).parse()[0]
@@ -83,6 +96,9 @@ def update_user(request: HttpRequest) -> HttpResponse:
 
 @require_GET
 def get_user_details(request: HttpRequest) -> HttpResponse:
+    """
+     Retrieves user details based on session id
+    """
     user = request.user
     if user.is_authenticated:
         selected_keys = ['username', 'email', 'first_name', 'last_name', "followers", "following"]
@@ -92,40 +108,23 @@ def get_user_details(request: HttpRequest) -> HttpResponse:
         return JsonResponse({'message': 'Unauthenticated user'}, status=HTTPStatus.UNAUTHORIZED)
 
 
-@require_GET
-def get_followers(request: HttpRequest) -> HttpResponse:
-    user = request.user
-    if user.is_authenticated:
-        user_followers = Follow.objects.filter(followee_id=user)
-        print(user_followers)
-        return JsonResponse({'message': 'ok'}, status=HTTPStatus.OK)
-    else:
-        return JsonResponse({'message': 'Unauthenticated user'}, status=HTTPStatus.UNAUTHORIZED)
-
-
-@require_GET
-def get_following(request: HttpRequest) -> HttpResponse:
-    user = request.user
-    if user.is_authenticated:
-        user_following = Follow.objects.filter(follower_id=user)
-        print(user_following)
-        return JsonResponse({'message': 'ok'}, status=HTTPStatus.OK)
-    else:
-        return JsonResponse({'message': 'Unauthenticated user'}, status=HTTPStatus.UNAUTHORIZED)
-
-
 @require_POST
-def follow_user(request: HttpRequest, username: str) -> HttpResponse:
+def follow_user(request: HttpRequest) -> HttpResponse:
+    """
+        Follow the user given through the url
+    """
     user = request.user
+    username = request.POST.get(key="followee")
     if user.is_authenticated:
         try:
             followee = CustomUser.objects.get(username=username)
             follower = CustomUser.objects.get(username=user.username)
-            Follow.objects.create(follower_id=user, followee_id=followee)
-            follower.following += 1
-            follower.save()
-            followee.followers += 1
-            followee.save()
+            is_new_follower = Follow.objects.get_or_create(follower_id=follower, followee_id=followee)[1]
+            if is_new_follower:
+                follower.following += 1
+                follower.save()
+                followee.followers += 1
+                followee.save()
 
             return JsonResponse({'message': user.username + ' is now following ' + followee.username},
                                 status=HTTPStatus.OK)
@@ -138,6 +137,9 @@ def follow_user(request: HttpRequest, username: str) -> HttpResponse:
 
 @require_POST
 def unfollow_user(request: HttpRequest, username: str) -> HttpResponse:
+    """
+        unfollow the user given through the url
+    """
     user = request.user
     if user.is_authenticated:
         try:
@@ -163,6 +165,9 @@ def unfollow_user(request: HttpRequest, username: str) -> HttpResponse:
 
 @require_GET
 def get_followers(request: HttpRequest) -> HttpResponse:
+    """
+        Retrieve all the user's followers
+    """
     user = request.user
     if user.is_authenticated:
         try:
@@ -172,7 +177,7 @@ def get_followers(request: HttpRequest) -> HttpResponse:
             followers = []
             for follow in user_follows:
                 followers.append({"username": follow.follower_id.username, "profileIMG": follow.follower_id.profileIMG})
-            return JsonResponse({'followers': followers}, status=HTTPStatus.OK)
+            return JsonResponse(data=followers, status=HTTPStatus.OK, safe=False)
         except CustomUser.DoesNotExist:
             return JsonResponse({'message': user.username + ' not found'}, status=HTTPStatus.BAD_REQUEST)
     else:
@@ -181,6 +186,9 @@ def get_followers(request: HttpRequest) -> HttpResponse:
 
 @require_GET
 def get_following(request: HttpRequest) -> HttpResponse:
+    """
+        Retrieve all the user's followings
+    """
     user = request.user
     if user.is_authenticated:
         try:
@@ -191,8 +199,28 @@ def get_following(request: HttpRequest) -> HttpResponse:
             for follow in user_follows:
                 following.append(
                     {"username": follow.followee_id.username, "profileIMG": follow.followee_id.profileIMG})
-            return JsonResponse({'followers': following}, status=HTTPStatus.OK)
+            return JsonResponse(data=following, status=HTTPStatus.OK, safe=False)
         except CustomUser.DoesNotExist:
             return JsonResponse({'message': user.username + ' not found'}, status=HTTPStatus.BAD_REQUEST)
     else:
         return JsonResponse({'message': 'Unauthenticated user'}, status=HTTPStatus.UNAUTHORIZED)
+
+
+@require_GET
+def get_users(request: HttpRequest, username: str) -> HttpResponse:
+    """
+        Get users whose username contains value passed in the route
+    """
+    users = CustomUser.objects.filter(username__contains=username)
+    formatted_users = format_user_objects(users)
+    return JsonResponse(data=formatted_users, status=HTTPStatus.OK, safe=False)
+
+
+@require_GET
+def get_user_profile(request: HttpRequest, username: str) -> HttpResponse:
+    """
+        Get users whose username contains value passed in the route
+    """
+    user = CustomUser.objects.get(username=username)
+    formatted_user_profile = format_user_profile(user)
+    return JsonResponse(data=formatted_user_profile, status=HTTPStatus.OK, safe=False)

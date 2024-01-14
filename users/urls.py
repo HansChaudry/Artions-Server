@@ -11,8 +11,10 @@ urlpatterns = [
     path(r'user/details', views.get_user_details),
     path(r'user/followers', views.get_followers),
     path(r'user/following', views.get_following),
-    path(r'user/follow/<str:username>', views.follow_user),
+    path(r'user/follow', views.follow_user),
     path(r'user/unFollow/<str:username>', views.unfollow_user),
     path(r'user/getFollowers', views.get_followers),
-    path(r'user/getFollowing', views.get_following)
+    path(r'user/getFollowing', views.get_following),
+    path(r'getUsers/<str:username>', views.get_users),
+    path(r'getProfile/<str:username>', views.get_user_profile)
 ]

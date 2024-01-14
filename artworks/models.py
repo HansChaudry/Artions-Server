@@ -1,6 +1,7 @@
 from django.db import models
 from users.models import CustomUser
 
+
 # Create your models here.
 class Artwork(models.Model):
     title = models.CharField('title', blank=False, max_length=120)
